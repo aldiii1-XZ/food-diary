@@ -1,9 +1,11 @@
 # Food Diary — catatan build & uji
 
-Status: kode lengkap untuk MVP PRD, TAPI **belum pernah di-build** — ditulis di
-Windows yang tidak punya Xcode. Build pertama di Mac hampir pasti perlu
-penyesuaian kecil (signing, entitlement). Jangan kaget kalau ada error compile.
-— tanggal tulis: 2026-10-31
+Status: MVP PRD selesai dan **sudah build + uji otomatis di CI** (GitHub Actions
+runner macOS): build hijau, unit test 11/11 lulus, app jalan di simulator
+(bukti screenshot). Lihat bagian "CI (GitHub Actions)". Kode tetap ditulis di
+Windows tanpa Xcode; kalau build manual di Mac perlu penyesuaian
+signing/entitlement, catat di sini.
+— tanggal tulis: 2026-10-31 · update CI: 2026-11-01
 
 ## Isi
 
@@ -37,6 +39,9 @@ penyesuaian kecil (signing, entitlement). Jangan kaget kalau ada error compile.
 
 Unit test: pilih scheme FoodDiary → Cmd+U (jalan di simulator).
 
+Sudah tercakup otomatis di CI: build, unit test, dan tampilan timeline (lewat
+screenshot). Butir checklist di bawah sisanya masih perlu cek manual.
+
 Checklist manual (PRD §12):
 
 - [ ] T-01 simpan foto tanpa nama → catatan muncul di timeline
@@ -50,6 +55,28 @@ Checklist manual (PRD §12):
 - [ ] T-09 tolak izin kamera → tetap bisa pilih dari galeri
 - [ ] T-10 hapus file foto manual (Files/Simulator) → app tidak crash, keluar placeholder
 
+## CI (GitHub Actions)
+
+Repo publik: <https://github.com/aldiii1-XZ/food-diary> — runner macOS gratis.
+Workflow `.github/workflows/ios.yml` jalan tiap push ke `main` (bisa juga
+manual lewat tab Actions → Run workflow):
+
+1. `xcodegen generate`
+2. `xcodebuild test` — unit test di simulator "iPhone 16"
+3. launch app + screenshot tab Hari Ini (terang & gelap) — data contoh lewat
+   argumen `-uiDemoSeed`
+4. build Release unsigned → `FoodDiary-unsigned.ipa`
+5. unggah screenshot + `.ipa` sebagai artefak `food-diary-output`
+
+- Pantau dari terminal: `gh run list`, `gh run watch`.
+- Unduh artefak (jalankan dari folder tujuan):
+  `gh run download <id-run> -n food-diary-output -R aldiii1-XZ/food-diary`
+  → `01-today.png`, `02-today-dark.png`, `FoodDiary-unsigned.ipa`.
+- `.ipa` unsigned = belum ditandatangani; install lewat AltStore/Sideloadly
+  dengan Apple ID sendiri.
+- Data contoh seed dibuat hanya saat argumen `-uiDemoSeed` ada (CI); pemakaian
+  normal tidak pernah membuatnya.
+
 ## Kalau mau ganti identitas
 
 Bundle ID & App Group dipakai di tiga tempat — ubah semuanya:
@@ -61,6 +88,6 @@ Bundle ID & App Group dipakai di tiga tempat — ubah semuanya:
 
 - Build, signing, install ke iPhone, dan App Store semuanya butuh macOS + Xcode.
 - Windows bisa dipakai untuk nulis kode (seperti sekarang) dan push git.
-- Opsi kalau tidak ada Mac: Mac fisik sewaan (mis. MacinCloud), atau CI macOS
-  (GitHub Actions `macos` runner — gratis untuk repo publik; hasil build bisa
-  diunduh untuk di-install via TestFlight/side-load).
+- CI macOS (GitHub Actions) sudah dipakai untuk build + test + screenshot
+  (bagian "CI" di atas). Yang tetap butuh Mac/Apple ID: signing, install ke
+  iPhone (unduh `.ipa` unsigned → side-load), App Store.
