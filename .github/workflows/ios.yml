@@ -1,0 +1,82 @@
+name: iOS CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-test-run:
+    name: Build, unit tests, launch in simulator
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Environment check
+        run: |
+          xcodebuild -version
+          xcrun simctl list devices available | sed -n '1,25p'
+
+      - name: Build & run unit tests
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project FoodDiary.xcodeproj \
+            -scheme FoodDiary \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -derivedDataPath .build-dd
+
+      - name: Launch app in simulator & take screenshots
+        run: |
+          set -x
+          xcrun simctl boot "iPhone 16" || true
+          xcrun simctl bootstatus "iPhone 16" -b
+          APP=".build-dd/Build/Products/Debug-iphonesimulator/FoodDiary.app"
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
+          xcrun simctl install booted "$APP"
+          xcrun simctl launch booted "$BUNDLE_ID" -uiDemoSeed
+          sleep 8
+          xcrun simctl io booted screenshot "01-today.png"
+          xcrun simctl ui booted appearance dark
+          xcrun simctl terminate booted "$BUNDLE_ID" || true
+          xcrun simctl launch booted "$BUNDLE_ID" -uiDemoSeed
+          sleep 5
+          xcrun simctl io booted screenshot "02-today-dark.png"
+
+      - name: Device build (unsigned, for sideload later)
+        if: always()
+        continue-on-error: true
+        run: |
+          xcodebuild build \
+            -project FoodDiary.xcodeproj \
+            -scheme FoodDiary \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath .build-ios \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+          APP=".build-ios/Build/Products/Release-iphoneos/FoodDiary.app"
+          if [ -d "$APP" ]; then
+            rm -rf Payload FoodDiary-unsigned.ipa
+            mkdir -p Payload
+            cp -R "$APP" Payload/FoodDiary.app
+            zip -qry FoodDiary-unsigned.ipa Payload
+            rm -rf Payload
+          fi
+
+      - name: Upload screenshots & build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: food-diary-output
+          path: |
+            01-today.png
+            02-today-dark.png
+            FoodDiary-unsigned.ipa
+          if-no-files-found: warn

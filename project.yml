@@ -1,0 +1,106 @@
+name: FoodDiary
+options:
+  bundleIdPrefix: id.aldiii
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    CODE_SIGN_STYLE: Automatic
+targets:
+  FoodDiary:
+    type: application
+    platform: iOS
+    sources:
+      - path: FoodDiary
+      - path: Shared
+    entitlements:
+      path: FoodDiary/FoodDiary.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.id.aldiii.fooddiary
+    info:
+      path: FoodDiary/Info.plist
+      properties:
+        CFBundleDisplayName: Food Diary
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        LSRequiresIPhoneOS: true
+        UILaunchScreen: {}
+        NSCameraUsageDescription: "Kamera dipakai untuk memotret makanan/minuman yang kamu catat."
+        NSPhotoLibraryUsageDescription: "Galeri dipakai untuk memilih foto makanan yang sudah ada di perangkat."
+        CFBundleURLTypes:
+          - CFBundleURLName: id.aldiii.fooddiary
+            CFBundleURLSchemes:
+              - fooddiary
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: id.aldiii.fooddiary
+    dependencies:
+      - target: FoodDiaryWidget
+        embed: true
+      - sdk: WidgetKit.framework
+
+  FoodDiaryWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: FoodDiaryWidget
+      - path: Shared
+    entitlements:
+      path: FoodDiaryWidget/FoodDiaryWidget.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.id.aldiii.fooddiary
+    info:
+      path: FoodDiaryWidget/Info.plist
+      properties:
+        CFBundleDisplayName: Food Diary
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: id.aldiii.fooddiary.widget
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+
+  FoodDiaryTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: FoodDiaryTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: id.aldiii.fooddiary.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/FoodDiary.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FoodDiary"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+    dependencies:
+      - target: FoodDiary
+
+schemes:
+  FoodDiary:
+    build:
+      targets:
+        FoodDiary: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - FoodDiaryTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
