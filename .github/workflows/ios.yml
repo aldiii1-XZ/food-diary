@@ -11,7 +11,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -34,11 +34,13 @@ jobs:
             -derivedDataPath .build-dd
 
       - name: Launch app in simulator & take screenshots
+        if: always()
         run: |
           set -x
+          APP=".build-dd/Build/Products/Debug-iphonesimulator/FoodDiary.app"
+          if [ ! -d "$APP" ]; then echo "app belum terbangun - lewati screenshot"; exit 0; fi
           xcrun simctl boot "iPhone 16" || true
           xcrun simctl bootstatus "iPhone 16" -b
-          APP=".build-dd/Build/Products/Debug-iphonesimulator/FoodDiary.app"
           BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
           xcrun simctl install booted "$APP"
           xcrun simctl launch booted "$BUNDLE_ID" -uiDemoSeed

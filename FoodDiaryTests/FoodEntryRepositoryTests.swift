@@ -79,8 +79,9 @@ final class FoodEntryRepositoryTests: XCTestCase {
     /// §5.3: file foto tidak dihapus selama masih dipakai catatan lain.
     @MainActor
     func testDeleteKeepsPhotoUsedByAnotherEntry() throws {
-        let repository = makeRepository()
+        // Satu context untuk insert + hapus — sama seperti alur app.
         let context = ModelContext(container)
+        let repository = FoodEntryRepository(context: context, imageStore: store)
         let filename = try store.savePhotoData(Data([0x01]))
         let first = FoodEntry(imagePath: filename, consumedAt: .now)
         let second = FoodEntry(imagePath: filename, consumedAt: .now)
