@@ -129,4 +129,41 @@ final class FoodEntryRepositoryTests: XCTestCase {
         XCTAssertEqual(todayEntries.count, 1)
         XCTAssertEqual(todayEntries.first?.foodName, "Hari ini")
     }
+
+    /// Data tidak hilang setelah app ditutup lalu dibuka lagi (restart).
+    /// Container sesi pertama dilepas, lalu dibuka ulang dari file store yang sama.
+    @MainActor
+    func testEntriesSurviveContainerReopen() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("food-diary-persist-\(UUID().uuidString)", isDirectory: true)
+        let storeURL = directory.appendingPathComponent("persist.store")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        // Sesi 1 — seperti pemakaian normal, lalu app "ditutup".
+        do {
+            let firstContainer = try ModelContainer(
+                for: FoodEntry.self,
+                configurations: ModelConfiguration(url: storeURL)
+            )
+            let repository = FoodEntryRepository(
+                context: ModelContext(firstContainer),
+                imageStore: store
+            )
+            try repository.createEntry(
+                photoData: Data([0x01]),
+                foodName: "Soto",
+                consumedAt: .now,
+                foodDescription: nil
+            )
+        }
+
+        // Sesi 2 — app "dibuka lagi": data sesi sebelumnya harus masih ada.
+        let secondContainer = try ModelContainer(
+            for: FoodEntry.self,
+            configurations: ModelConfiguration(url: storeURL)
+        )
+        let entries = try ModelContext(secondContainer).fetch(FetchDescriptor<FoodEntry>())
+        XCTAssertEqual(entries.count, 1)
+        XCTAssertEqual(entries.first?.foodName, "Soto")
+    }
 }

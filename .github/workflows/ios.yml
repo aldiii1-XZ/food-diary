@@ -43,14 +43,26 @@ jobs:
           xcrun simctl bootstatus "iPhone 16" -b
           BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
           xcrun simctl install booted "$APP"
+
+          # 1) Launch pertama: isi data contoh, seperti pemakaian pertama.
           xcrun simctl launch booted "$BUNDLE_ID" -uiDemoSeed
           sleep 8
           xcrun simctl io booted screenshot "01-today.png"
+
+          # 2) Tutup app lalu buka LAGI tanpa argumen seed — kalau penyimpanan
+          #    benar, catatan dari launch pertama masih tampil; kalau hilang,
+          #    layar bakal kosong dan ketahuan dari screenshot ini.
+          xcrun simctl terminate booted "$BUNDLE_ID" || true
+          xcrun simctl launch booted "$BUNDLE_ID"
+          sleep 5
+          xcrun simctl io booted screenshot "02-after-restart.png"
+
+          # 3) Versi mode gelap.
           xcrun simctl ui booted appearance dark
           xcrun simctl terminate booted "$BUNDLE_ID" || true
-          xcrun simctl launch booted "$BUNDLE_ID" -uiDemoSeed
+          xcrun simctl launch booted "$BUNDLE_ID"
           sleep 5
-          xcrun simctl io booted screenshot "02-today-dark.png"
+          xcrun simctl io booted screenshot "03-today-dark.png"
 
       - name: Device build (unsigned, for sideload later)
         if: always()
@@ -79,6 +91,7 @@ jobs:
           name: food-diary-output
           path: |
             01-today.png
-            02-today-dark.png
+            02-after-restart.png
+            03-today-dark.png
             FoodDiary-unsigned.ipa
           if-no-files-found: warn
